@@ -1,0 +1,9 @@
+streamlit
+pandas
+pillow
+pytesseract
+openpyxl
+deep-translator  
+pypdf
+pdf2image
+pyzbar
