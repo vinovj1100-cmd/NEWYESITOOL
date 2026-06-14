@@ -1,18 +1,23 @@
-import base64
-import hashlib
-import io
-import re
+import streamlit as st
+import sqlite3
+import pandas as pd
+import pytesseract
 import pypdf
+import re
+import io
+import os 
+import hashlib
+import cv2
+import logging
+import contextlib
+from datetime import datetime
+from PIL import Image
+import numpy as np
+from deep_translator import GoogleTranslator
+from fpdf import FPDF
+import base64
 from pdf2image import convert_from_bytes
 from pyzbar.pyzbar import decode
-import pytesseract
-from pathlib import Path
-from datetime import datetime
-
-import pandas as pd
-import streamlit as st
-# Required for enhanced bulk conversion (sim.py and app.py merged requirement)
-from deep_translator import GoogleTranslator
 
 from db import (
     init_db,
