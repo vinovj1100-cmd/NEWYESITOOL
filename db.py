@@ -110,7 +110,7 @@ def init_db():
         # Default Admin Account
         c.execute(
             "INSERT OR IGNORE INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-            ("VINO VJ", hashlib.sha256("0088".encode()).hexdigest(), "VINO VJ")
+            ("VINO VJ", hashlib.sha256("0088".encode()).hexdigest(), "Admin")
         )
 
         conn.commit()
