@@ -529,6 +529,16 @@ with tab_pdf:
     st.markdown('<div class="glass">', unsafe_allow_html=True)
     st.subheader("Pro PDF Label Sequencer")
     
+    # --- MODE SELECTOR ---
+    sequencer_mode = st.radio(
+        "🎯 Select Sequencing Mode:",
+        ["📋 Smart Sort (Flexible)", "🔒 Strict Rearrange (Exact Order)"],
+        horizontal=True,
+        help="Smart Sort: Includes unmatched pages. Strict: ONLY pages matching your sequence."
+    )
+    
+    st.divider()
+    
     col1, col2 = st.columns([1, 2])
     with col1:
         sort_list = st.text_area("Target Sequence Order", height=300, placeholder="Paste Tracking IDs here...")
@@ -537,7 +547,7 @@ with tab_pdf:
         label_file = st.file_uploader("Upload Labels PDF (Bulk)", type="pdf")
         use_ocr = st.checkbox("Enable OCR Fallback", value=True)
 
-    if st.button("Scan & Sort PDF", type="primary", use_container_width=True):
+    if st.button("⚙️ Process PDF", type="primary", use_container_width=True):
         
         target_ids_raw = [tid.strip() for tid in sort_list.split('\n') if tid.strip()]
         target_ids = []
@@ -563,7 +573,7 @@ with tab_pdf:
         if not target_ids or not label_file:
             st.warning("Provide sequence IDs and upload a PDF.")
         else:
-            with st.spinner("Mapping PDF pages via Barcodes & OCR..."):
+            with st.spinner("Analyzing PDF pages..."):
                 try:
                     pdf_reader = pypdf.PdfReader(io.BytesIO(label_file.getvalue()))
                     pdf_writer = pypdf.PdfWriter()
@@ -588,57 +598,98 @@ with tab_pdf:
                                 pdf_duplicates_skipped += 1
 
                     if pdf_duplicates_skipped > 0:
-                        st.toast(f"Skipped {pdf_duplicates_skipped} duplicate page(s) in the uploaded PDF!", icon="ℹ️")
+                        st.toast(f"Skipped {pdf_duplicates_skipped} duplicate page(s) in PDF!", icon="ℹ️")
 
                     results_dataset = []
                     matched_count = 0
                     new_page_counter = 1
                     expected_set = set(target_ids)
-
-                    for tid in target_ids:
-                        if tid in id_to_page_map:
-                            orig_page = id_to_page_map[tid]["original_idx"]
-                            conv_page = new_page_counter
-                            pdf_writer.add_page(id_to_page_map[tid]["page"])
-                            matched_count += 1
-                            new_page_counter += 1
-                            mis_pdf = ""
-                            mis_table = ""
-                        else:
-                            orig_page = "N/A"
-                            conv_page = "N/A"
-                            mis_pdf = ""
-                            mis_table = tid
-                            
-                        results_dataset.append({
-                            "Original pdf page": orig_page,
-                            "CONVERTED pdf page": conv_page,
-                            "MISMATCH from pdf": mis_pdf,
-                            "MISMATCH from TABLE": mis_table
-                        })
-
-                    for tid, data in id_to_page_map.items():
-                        if tid not in expected_set:
+                    
+                    # --- STRICT REARRANGE MODE ---
+                    if sequencer_mode == "🔒 Strict Rearrange (Exact Order)":
+                        st.info("🔒 **STRICT MODE**: Only pages matching your sequence will be included. Pages NOT in your list will be EXCLUDED.")
+                        
+                        for tid in target_ids:
+                            if tid in id_to_page_map:
+                                orig_page = id_to_page_map[tid]["original_idx"]
+                                conv_page = new_page_counter
+                                pdf_writer.add_page(id_to_page_map[tid]["page"])
+                                matched_count += 1
+                                new_page_counter += 1
+                                mis_pdf = ""
+                                mis_table = ""
+                            else:
+                                orig_page = "N/A"
+                                conv_page = "N/A"
+                                mis_pdf = ""
+                                mis_table = tid
+                                
                             results_dataset.append({
-                                "Original pdf page": data["original_idx"],
-                                "CONVERTED pdf page": "N/A",
-                                "MISMATCH from pdf": tid,
-                                "MISMATCH from TABLE": ""
+                                "Status": "✅ INCLUDED" if tid in id_to_page_map else "❌ MISSING",
+                                "Sequence Order": target_ids.index(tid) + 1,
+                                "ID": tid,
+                                "Original Page": orig_page,
+                                "Output Page": conv_page,
+                                "Notes": "Found and sequenced" if tid in id_to_page_map else "ID not detected in PDF"
+                            })
+                    
+                    # --- SMART SORT MODE ---
+                    else:
+                        st.info("📋 **SMART MODE**: Pages matching your sequence come first (in order), followed by any extra pages found.")
+                        
+                        for tid in target_ids:
+                            if tid in id_to_page_map:
+                                orig_page = id_to_page_map[tid]["original_idx"]
+                                conv_page = new_page_counter
+                                pdf_writer.add_page(id_to_page_map[tid]["page"])
+                                matched_count += 1
+                                new_page_counter += 1
+                                mis_pdf = ""
+                                mis_table = ""
+                            else:
+                                orig_page = "N/A"
+                                conv_page = "N/A"
+                                mis_pdf = ""
+                                mis_table = tid
+                                
+                            results_dataset.append({
+                                "Original pdf page": orig_page,
+                                "CONVERTED pdf page": conv_page,
+                                "MISMATCH from pdf": mis_pdf,
+                                "MISMATCH from TABLE": mis_table
                             })
 
-                    if results_dataset:
-                        st.dataframe(pd.DataFrame(results_dataset), use_container_width=True, hide_index=True)
+                        # Phase 2: Identify extra items found in the PDF that were NOT in the target sequence
+                        for tid, data in id_to_page_map.items():
+                            if tid not in expected_set:
+                                pdf_writer.add_page(data["page"])
+                                new_page_counter += 1
+                                results_dataset.append({
+                                    "Original pdf page": data["original_idx"],
+                                    "CONVERTED pdf page": new_page_counter - 1,
+                                    "MISMATCH from pdf": tid,
+                                    "MISMATCH from TABLE": ""
+                                })
 
+                    # --- RESULTS DISPLAY ---
+                    if results_dataset:
+                        st.divider()
+                        st.markdown("### 📊 Processing Results")
+                        res_df = pd.DataFrame(results_dataset)
+                        st.dataframe(res_df, use_container_width=True, hide_index=True)
+
+                    # --- PDF GENERATION & DOWNLOAD ---
                     if matched_count > 0:
                         out_io = io.BytesIO()
                         pdf_writer.write(out_io)
-                        log_action(user, "PDF_SEQUENCED", f"Matched {matched_count} pages.")
-                        st.success(f"✅ Created PDF with {matched_count} sorted pages!")
+                        log_action(user, "PDF_SEQUENCED", f"Mode: {sequencer_mode}, Matched: {matched_count} pages.")
+                        st.success(f"✅ PDF Ready: {matched_count} pages sequenced!")
                         
+                        filename = f"sorted_labels_{sequencer_mode.split('(')[1].split(')')[0].lower().replace(' ', '_')}.pdf"
                         st.download_button(
-                            label="📥 Download CONVERTED PDF", 
+                            label="📥 Download Sequenced PDF", 
                             data=out_io.getvalue(), 
-                            file_name="sorted_labels.pdf", 
+                            file_name=filename, 
                             mime="application/pdf",
                             use_container_width=True
                         )
