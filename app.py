@@ -30,13 +30,12 @@ from db import (
     get_templates,
     save_template,
     save_memory,
-    get_memory, # Added to access setting details directly
+    get_memory,
     get_recent_preferences,
     add_action_log,
     record_preference,
     auth_login,
     add_user,
-    # ADMIN SIM INTEGRATION
     load_sim_db,
     save_sim_db,
 )
@@ -83,35 +82,33 @@ def calculate_luhn(base14):
 
 # --- CUSTOM CSS (ENHANCED LOGIN + UI) ---
 def apply_custom_theme():
-    # Enhanced CSS to match the glassmorphism login interface exactly (image_0.png)
-    # Plus general app glass styling.
     st.markdown(
-        f"""
+        """
         <style>
-        /* General App Background (replicated from app.py but refined) */
-        .stApp {{
+        /* General App Background */
+        .stApp {
             background: radial-gradient(circle at center, #0a192f 0%, #050a19 100%);
             background-size: cover;
             background-attachment: fixed;
-        }}
+        }
         
-        /* Glassmorphism Container (Image_0.png style) */
-        .login-glass {{
+        /* Glassmorphism Container */
+        .login-glass {
             background: rgba(15, 35, 60, 0.45);
             backdrop-filter: blur(25px) saturate(190%);
             -webkit-backdrop-filter: blur(25px) saturate(190%);
-            border: 1px solid rgba(100, 255, 218, 0.2); /* Faint cyan border */
-            border_radius: 35px;
+            border: 1px solid rgba(100, 255, 218, 0.2);
+            border-radius: 35px;
             padding: 3rem;
-            max_width: 450px;
+            max-width: 450px;
             margin: 5rem auto;
-            box_shadow: 0 0 40px rgba(100, 255, 218, 0.15); /* Internal glow */
+            box-shadow: 0 0 40px rgba(100, 255, 218, 0.15);
             text-align: center;
             position: relative;
-        }}
+        }
         
-        /* Cyan Edge Glow effect (top-left) derived from Image_0.png */
-        .login-glass::before {{
+        /* Cyan Edge Glow effect */
+        .login-glass::before {
             content: "";
             position: absolute;
             top: 10px;
@@ -122,34 +119,34 @@ def apply_custom_theme():
             filter: blur(50px);
             border-radius: 50%;
             pointer-events: none;
-        }}
+        }
 
-        /* General UI Glass Panel (retained from app.py) */
-        .glass {{
+        /* General UI Glass Panel */
+        .glass {
             background: rgba(10, 20, 40, 0.55);
             backdrop-filter: blur(18px) saturate(170%);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 24px;
             padding: 1.5rem;
-            margin_bottom: 1rem;
-        }}
+            margin-bottom: 1rem;
+        }
         
-        /* Login Form Styling (matching Image_0.png inputs) */
-        .login-glass .stTextInput > div > div > input {{
+        /* Login Form Styling */
+        .login-glass .stTextInput > div > div > input {
             background-color: rgba(5, 10, 25, 0.8) !important;
             color: #ccd6f6 !important;
             border-radius: 12px !important;
             border: 1px solid rgba(100, 255, 218, 0.1) !important;
             padding: 12px 15px !important;
-        }}
+        }
         
-        .login-glass .stTextInput > div > div > input:focus {{
+        .login-glass .stTextInput > div > div > input:focus {
             border-color: rgba(100, 255, 218, 0.8) !important;
-            box_shadow: 0 0 10px rgba(100, 255, 218, 0.3) !important;
-        }}
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.3) !important;
+        }
 
-        /* Login Button Styling (Image_0.png) */
-        .login-glass .stButton > button {{
+        /* Login Button Styling */
+        .login-glass .stButton > button {
             background: linear-gradient(135deg, #64ffda 0%, #00b4db 100%) !important;
             color: #0a192f !important;
             font-weight: bold !important;
@@ -157,47 +154,47 @@ def apply_custom_theme():
             border: none !important;
             width: 100% !important;
             padding: 12px !important;
-            text_transform: uppercase;
-            letter_spacing: 1px;
-            box_shadow: 0 4px 15px rgba(100, 255, 218, 0.3) !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(100, 255, 218, 0.3) !important;
             transition: all 0.3s ease;
-        }}
+        }
         
-        .login-glass .stButton > button:hover {{
-            box_shadow: 0 6px 20px rgba(100, 255, 218, 0.5) !important;
+        .login-glass .stButton > button:hover {
+            box-shadow: 0 6px 20px rgba(100, 255, 218, 0.5) !important;
             transform: translateY(-2px);
-        }}
+        }
         
-        /* Forgot Password / Links color (Image_0.png) */
-        .login-glass a {{
+        /* Forgot Password / Links color */
+        .login-glass a {
             color: rgba(200, 200, 200, 0.8) !important;
-            font_size: 0.85rem;
-            text_decoration: none;
-        }}
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
         
         /* WMS Logo area placeholder styling */
-        .wms-logo-placeholder {{
+        .wms-logo-placeholder {
             border: 4px solid #64ffda;
             color: #64ffda;
-            font_family: 'Courier New', monospace;
-            font_size: 2rem;
-            font_weight: bold;
-            border_radius: 50%;
+            font-family: 'Courier New', monospace;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 50%;
             width: 80px;
             height: 80px;
             margin: 0 auto 2rem auto;
             display: flex;
-            align_items: center;
+            align-items: center;
             justify-content: center;
-            box_shadow: 0 0 20px rgba(100, 255, 218, 0.4);
-        }}
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.4);
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
 def log_action(user, action, ref=None):
-    add_action_log(action, ref, None, user) # Fixed log call signature
+    add_action_log(action, ref, None, user)
 
 # INITIALIZATION
 apply_custom_theme()
@@ -206,34 +203,25 @@ if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "user" not in st.session_state:
     st.session_state.user = None
-if 'df_sim_db' not in st.session_state: # SIM.py Integrated state
+if 'df_sim_db' not in st.session_state:
     st.session_state.df_sim_db = None
 
-# --- AUTHENTICATION INTERFACE (ENHANCED LIKE IMAGE_0.PNG) ---
+# --- AUTHENTICATION INTERFACE ---
 if not st.session_state.authenticated:
-    # Top-level glass container (Image_0.png style)
     st.markdown('<div class="login-glass">', unsafe_allow_html=True)
     
-    # Integrated WMS Logo placeholder (replaces standard st.title inside login)
     st.markdown('<div class="wms-logo-placeholder">WMS</div>', unsafe_allow_html=True)
     
     with st.form("login_form", clear_on_submit=False):
-        # Username Input (styled via CSS to look like Image_0.png)
-        # Note: Icons require custom html injection not standard in st.text_input
-        # but the style is replicated.
         uname = st.text_input("Username", placeholder="Username", label_visibility="collapsed")
-        
-        # Password Input (styled via CSS)
         pwd = st.text_input("Password", type="password", placeholder="Password", label_visibility="collapsed")
         
-        # Flex container for Remember Me and Forgot Password (Image_0.png style)
         col_rem, col_forgot = st.columns([1, 1])
         with col_rem:
             remember = st.checkbox("Remember me", value=True)
         with col_forgot:
             st.markdown('<div style="text-align:right;"><a href="#">Forgot Password?</a></div>', unsafe_allow_html=True)
             
-        # LOGIN Button (styled via CSS)
         submitted = st.form_submit_button("LOGIN")
         
     if submitted:
@@ -248,7 +236,7 @@ if not st.session_state.authenticated:
             log_action(uname if uname else "Unknown", "Login Failed", "Invalid Credentials")
 
     st.markdown("</div>", unsafe_allow_html=True)
-    st.stop() # Halt main app execution until logged in
+    st.stop()
 
 # --- MAIN APP INTERFACE ---
 user = st.session_state.user["username"]
@@ -257,22 +245,18 @@ role = st.session_state.user["role"]
 st.title("Warehouse Operations Pro")
 st.caption(f"Welcome, {user} ({role}). Local-first warehouse app with memory, OCR, and advanced adaptations.")
 
-# --- SIDEBAR: REWORKED ---
+# --- SIDEBAR: SYSTEM STATUS & SETTINGS ---
 with st.sidebar:
-    # 1. ONLINE ACCESS SWITCH (Integrated Requirement)
     st.header("🌐 System Status")
     online_access_status = can_sync_now()
     
-    # Toggle switch in sidebar
     is_online = st.toggle("Online Access (Sync)", value=online_access_status, help="Disable to stop offline queue synchronization.")
     
-    # Save the setting if it changes
     if is_online != online_access_status:
         set_setting("online_access", str(is_online))
         status_text = "Enabled" if is_online else "Disabled"
         st.success(f"Online Sync {status_text}.")
         log_action(user, "Set Sync Status", status_text)
-        st.rerun()
 
     status_color = "green" if is_online else "red"
     status_msg = "ONLINE" if is_online else "OFFLINE (Queue Paused)"
@@ -280,7 +264,6 @@ with st.sidebar:
     
     st.divider()
 
-    # 2. SESSION & OFFLINE QUEUE (Existing)
     st.header("📊 Queue & Settings")
     
     col_u, col_r = st.columns(2)
@@ -302,7 +285,6 @@ with st.sidebar:
             st.success("Saved")
             log_action(user, "Settings Updated", f"Site: {site}")
 
-    # Offline Queue Status (Integrated check for online status)
     qs = queue_status()
     st.metric("Queued actions", qs["queued"], help="Sync paused if OFFLINE.")
     st.metric("Last sync", qs["last_sync"] or "Never")
@@ -317,15 +299,12 @@ with st.sidebar:
 
     st.divider()
 
-    # 3. REPORTS (Integrated Requirement)
     st.header("📋 Reports")
-    # New sidebar option for summary report
     st.markdown("Download snapshot of current operations.")
     
     if st.button("📊 Generate Operations Summary", use_container_width=True):
         with st.spinner("Generating summary..."):
             log_action(user, "Report Generated", "Operations Summary")
-            # Compile current stats
             inv_df = get_inventory()
             orders_df = get_orders()
             queue_stats = queue_status()
@@ -352,7 +331,6 @@ with st.sidebar:
             }
             summary_df = pd.DataFrame(summary_data)
             
-            # Prepare CSV for download
             csv_buffer = io.BytesIO()
             summary_df.to_csv(csv_buffer, index=False)
             csv_data = csv_buffer.getvalue()
@@ -372,7 +350,6 @@ inv = get_inventory()
 orders = get_orders()
 q = queue_status()
 
-# Key Metrics Row
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Items", int(inv["stock"].sum()) if not inv.empty else 0)
 c2.metric("SKUs", len(inv))
@@ -381,14 +358,11 @@ c4.metric("Queue", q["queued"])
 
 # --- TAB DEFINITIONS ---
 tab_names = ["Dashboard", "Inventory", "Orders", "Auditor", "Bulk Convert", "PDF Sequencer", "Templates", "Memory"]
-# Only add Admin tab if role is Admin
 if role == "Admin":
     tab_names.append("Admin 🔐")
 
-# Correct logic to handle tabs based on role
 tabs = st.tabs(tab_names)
 
-# Mapping tabs to variables manually as st.tabs(names) returns a list
 tab_dash = tabs[0]
 tab_inv = tabs[1]
 tab_ord = tabs[2]
@@ -397,7 +371,6 @@ tab_bulk = tabs[4]
 tab_pdf = tabs[5]
 tab_temp = tabs[6]
 tab_mem = tabs[7]
-# Handle Admin tab visibility correctly
 tab_admin = tabs[8] if role == "Admin" else None
 
 # --- TABS CONTENT ---
@@ -434,7 +407,6 @@ with tab_inv:
     
     col_sug1, col_sug2 = st.columns(2)
     
-    # Wrap the output in an f-string so it evaluates as one single element
     col_sug1.write(f"Alias suggestion: {suggest_alias(product) or 'None'}")
     col_sug2.write(f"Template suggestion: {suggest_template(product) or 'None'}")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -487,12 +459,10 @@ with tab_aud:
             results = []
             for tid in sorted(set(m_map.keys()) | set(s_map.keys())):
                 exp, got = m_map.get(tid, set()), s_map.get(tid, set())
-                # Use standard error icon for mismatched status (Image_3.png style)
                 status = "✅ MATCH" if exp == got else "❌ ERROR"
                 results.append({"ID": tid, "Status": status, "Expected": " | ".join(exp), "Actual": " | ".join(got)})
             
             res_df = pd.DataFrame(results)
-            # Apply styling matching image_4.png
             st.dataframe(res_df.style.apply(lambda x: ['background-color: #ffcccc' if '❌' in str(v) else '' for v in x], axis=1), use_container_width=True, hide_index=True)
             log_action(user, "Auditor Run")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -502,7 +472,6 @@ with tab_bulk:
     st.subheader("Bulk Title Converter (Translation + Templates)")
     st.markdown("Paste original titles (non-English). App will translate, standardize, and apply matched **Templates**.")
     
-    # --- NEW: Output Format Selector ---
     output_format = st.radio(
         "Select Output Format for Matched Items:", 
         ["Template Only", "Translation Only", "Combined (Template + Translation)"], 
@@ -526,36 +495,30 @@ with tab_bulk:
                     line = l.strip()
                     if line:
                         try:
-                            # 1. Translate
                             translated = translator.translate(line)
-                            # 2. Standardize Title
                             std_title = standardize_title(translated)
                             
-                            # 3. Check for Template
                             template_match = suggest_template(std_title)
                             
                             if template_match:
                                 matched_templates_count += 1
-                                # --- NEW: Apply Formatting based on Selection ---
                                 if output_format == "Template Only":
                                     results.append(template_match)
                                 elif output_format == "Translation Only":
                                     results.append(std_title)
                                 else:
-                                    # Combined format
                                     results.append(f"{template_match} (Match: {std_title})")
                             else:
-                                # No template found, just return the translated standardized title
                                 results.append(std_title)
                                 
                         except Exception as e:
-                            results.append(line.upper()) # Fallback
+                            results.append(line.upper())
                     else:
                         results.append("")
                         
             with col_g:
                 output_text = "\n".join(results)
-                st.text_area(" Output (Standardized via Templates/Translation)", value=output_text, height=300)
+                st.text_area("Output (Standardized via Templates/Translation)", value=output_text, height=300)
                 
             st.success(f"Processed {len(lines)} titles. Applied {matched_templates_count} templates.")
             log_action(user, "Bulk Conversion", f"Processed: {len(lines)}, Templates: {matched_templates_count}")
@@ -576,14 +539,12 @@ with tab_pdf:
 
     if st.button("Scan & Sort PDF", type="primary", use_container_width=True):
         
-        # Clean target IDs based on regex to form the expected TABLE sequence
         target_ids_raw = [tid.strip() for tid in sort_list.split('\n') if tid.strip()]
         target_ids = []
         for tid in target_ids_raw:
             match = SCANNING_ID_REGEX.search(tid)
             target_ids.append(match.group() if match else tid)
 
-        # Remove Duplicates Logic from Target List
         if remove_duplicates and target_ids:
             seen = set()
             cleaned_ids = []
@@ -607,10 +568,9 @@ with tab_pdf:
                     pdf_reader = pypdf.PdfReader(io.BytesIO(label_file.getvalue()))
                     pdf_writer = pypdf.PdfWriter()
                     
-                    # Convert to images using pdf2image
                     images = convert_from_bytes(label_file.getvalue(), dpi=200)
                     id_to_page_map = {}
-                    pdf_duplicates_skipped = 0 # Track duplicate pages in the physical PDF
+                    pdf_duplicates_skipped = 0
                     
                     for i, img in enumerate(images):
                         page_codes = []
@@ -622,7 +582,6 @@ with tab_pdf:
                             page_codes.extend(SCANNING_ID_REGEX.findall(pytesseract.image_to_string(img)))
                         
                         for code in set(page_codes): 
-                            # ONLY map the page if we haven't seen this ID yet
                             if code not in id_to_page_map:
                                 id_to_page_map[code] = {"page": pdf_reader.pages[i], "original_idx": i + 1}
                             else:
@@ -636,7 +595,6 @@ with tab_pdf:
                     new_page_counter = 1
                     expected_set = set(target_ids)
 
-                    # Phase 1: Process items in the exact order of the Target Sequence
                     for tid in target_ids:
                         if tid in id_to_page_map:
                             orig_page = id_to_page_map[tid]["original_idx"]
@@ -650,7 +608,7 @@ with tab_pdf:
                             orig_page = "N/A"
                             conv_page = "N/A"
                             mis_pdf = ""
-                            mis_table = tid # ID exists in TABLE but is missing from the uploaded PDF
+                            mis_table = tid
                             
                         results_dataset.append({
                             "Original pdf page": orig_page,
@@ -659,7 +617,6 @@ with tab_pdf:
                             "MISMATCH from TABLE": mis_table
                         })
 
-                    # Phase 2: Identify extra items found in the PDF that were NOT in the target sequence
                     for tid, data in id_to_page_map.items():
                         if tid not in expected_set:
                             results_dataset.append({
@@ -669,11 +626,9 @@ with tab_pdf:
                                 "MISMATCH from TABLE": ""
                             })
 
-                    # Render Output DataFrame
                     if results_dataset:
                         st.dataframe(pd.DataFrame(results_dataset), use_container_width=True, hide_index=True)
 
-                    # Provide PDF Generation & Download
                     if matched_count > 0:
                         out_io = io.BytesIO()
                         pdf_writer.write(out_io)
@@ -694,6 +649,7 @@ with tab_pdf:
                     st.error(f"❌ Processing Error: {str(e)}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 with tab_temp:
     st.markdown('<div class="glass">', unsafe_allow_html=True)
     st.subheader("Templates Database")
@@ -727,7 +683,6 @@ with tab_mem:
             
         if save_pref and pref_key:
             save_memory(pref_key, pref_value)
-            # Preference recording is local only in db.py
             record_preference(pref_key, pref_value)
             st.success("Memory stored locally.")
             log_action(user, "Memory Saved", pref_key)
@@ -739,7 +694,6 @@ with tab_mem:
         alias_dst = st.text_input("Alias target text")
         if st.button("Save alias") and alias_src and alias_dst:
             upsert_alias(alias_src, alias_dst)
-            # Aliases are part of memory table via "alias:" prefix
             enqueue_action("memory_save", {"key": f"alias:{alias_src.lower().strip()}", "value": alias_dst})
             st.success("Alias saved and queued.")
             log_action(user, "Alias Saved", f"{alias_src} -> {alias_dst}")
@@ -749,7 +703,7 @@ with tab_mem:
     st.dataframe(get_recent_preferences(), use_container_width=True, hide_index=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# --- TABS CONTENT: ADMIN PANEL (🔐 Role Restricted) ---
+# --- ADMIN PANEL (Role Restricted) ---
 if role == "Admin" and tab_admin:
     with tab_admin:
         st.markdown('<div class="glass">', unsafe_allow_html=True)
@@ -771,27 +725,20 @@ if role == "Admin" and tab_admin:
             
             st.subheader("System Audit Logs")
             with connect() as conn:
-                # Ordering by created_at desc, matching Audit Log requirement
                 logs_df = pd.read_sql_query("SELECT created_at, user, action_type, ref_id, payload FROM action_logs ORDER BY created_at DESC LIMIT 100", conn)
             st.dataframe(logs_df, use_container_width=True, hide_index=True)
             
         elif adm_opt == "📱 SIM Database Manager":
-            # ------------------------------------------------------------------
-            # INTEGRATION POINT: ALL SIM.PY FUNCTIONS (ADMIN ONLY)
-            # ------------------------------------------------------------------
-            st.subheader("📱 Samsung IMEI Database Manager (Integrated from sim.py)")
+            st.subheader("📱 Samsung IMEI Database Manager")
             
-            # Initialize integrated SIM DB state
             if st.session_state.df_sim_db is None:
                 st.session_state.df_sim_db = load_sim_db()
             
-            # Replicating sim.py sidebar structure within the admin main panel
             sim_tools_col, sim_conv_col = st.columns([1, 2])
             
             with sim_tools_col:
                 st.markdown("### 🛠️ SIM Database Tools")
                 
-                # Search Functionality (from sim.py)
                 search_query = st.text_input("🔍 Search Model or TAC (8 digits)", help="Enter Model Name or TAC Prefix.")
                 display_sim_df = st.session_state.df_sim_db
                 
@@ -803,7 +750,6 @@ if role == "Admin" and tab_admin:
 
                 st.write(f"Showing {len(display_sim_df)} entries")
                 
-                # The Data Editor - Replicated from sim.py Image structure
                 edited_sim_df = st.data_editor(
                     display_sim_df, 
                     num_rows="dynamic", 
@@ -818,24 +764,17 @@ if role == "Admin" and tab_admin:
                 )
                 
                 if st.button("💾 Save SIM Changes to CSV"):
-                    # Merge logic from sim.py
                     if search_query:
-                        # Update specific rows in session state
-                        # Note: This simple update assumes indices match, may need robust implementation
-                        # for highly filtered/sorted data. Adhering to sim.py logic strictly.
                         st.session_state.df_sim_db.update(edited_sim_df)
                     else:
                         st.session_state.df_sim_db = edited_sim_df
                         
-                    # Save to integrated CSV (defined in db.py)
                     save_sim_db(st.session_state.df_sim_db)
                     st.success("SIM Database file updated!")
                     log_action(user, "SIM DB Saved", f"{len(st.session_state.df_sim_db)} entries")
 
             with sim_conv_col:
-                st.markdown("### 📱 IMEI Converter Tools (sim.py)")
-                # Main Interface from sim.py
-                # Create mapping for the converter logic based on current DB
+                st.markdown("### 📱 IMEI Converter Tools")
                 sim_db_map = dict(zip(st.session_state.df_sim_db['TAC_Prefix'], st.session_state.df_sim_db['Expected_Offset']))
 
                 col_c1, col_c2 = st.columns(2)
@@ -848,7 +787,6 @@ if role == "Admin" and tab_admin:
 
                 if batch_input:
                     active_sim_map = sim_db_map.copy()
-                    # Process manual calibration if provided (sim.py logic)
                     if cal_input:
                         for line in cal_input.strip().split('\n'):
                             imeis = re.findall(r'\b\d{15}\b', line)
@@ -858,20 +796,15 @@ if role == "Admin" and tab_admin:
                     target_imeis = re.findall(r'\b\d{15}\b', batch_input)
                     sim_results = []
                     
-                    # Ensure regex import for findall used in sim.py logic (already imported in app.py)
-                    
                     for i1 in target_imeis:
                         tac = i1[:8]
-                        # Get offset from DB or use Default row if available, else 8 (sim.py logic)
                         default_sim_val = sim_db_map.get('0', 8) 
                         sim_offset = active_sim_map.get(tac, default_sim_val)
                         
-                        # Identify Model Name from DB
                         model_info = st.session_state.df_sim_db[st.session_state.df_sim_db['TAC_Prefix'] == tac]
                         model_sim_name = model_info['Model_Series'].values[0] if not model_info.empty else "Unknown TAC"
                         
                         base14 = i1[:14]
-                        # Integrated Luhn calculation utility
                         new_base = str(int(base14) + int(sim_offset)).zfill(14)
                         i2 = new_base + calculate_luhn(new_base)
                         
@@ -885,9 +818,8 @@ if role == "Admin" and tab_admin:
 
                     if sim_results:
                         st.divider()
-                        st.write("#### Integrated Results (sim.py)")
+                        st.write("#### Integrated Results")
                         st.dataframe(pd.DataFrame(sim_results), use_container_width=True, hide_index=True)
                         log_action(user, "SIM IMEI Converted", f"Processed: {len(sim_results)}")
-            # End of sim.py integration
 
         st.markdown("</div>", unsafe_allow_html=True)
