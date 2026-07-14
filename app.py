@@ -589,34 +589,25 @@ with tab_pdf:
 
     if st.button("⚙️ Process PDF", type="primary", use_container_width=True):
 
-        # --- WB PHONE+CODE MODE ---
+       # --- ENHANCED WB PHONE+CODE MODE ---
         if sequencer_mode == "📱 WB Phone+Code Matcher":
-            # Parse phone+code list
+            # 1. Parse target sequence list
             target_entries = []
             for line in sort_list.strip().split('\n'):
                 line = line.strip()
                 if not line:
                     continue
-                match = PHONE_CODE_REGEX.search(line)
-                if match:
-                    target_entries.append({
-                        'phone': match.group(1),
-                        'code': match.group(2),
-                        'raw': line
-                    })
-                else:
-                    # Try loose matching: first 7 digits and last 4 digits
-                    digits = re.findall(r'\d+', line)
-                    if len(digits) >= 2:
-                        # Find 7-digit and 4-digit sequences
-                        phone = next((d for d in digits if len(d) == 7), None)
-                        code = next((d for d in digits if len(d) == 4), None)
-                        if phone and code:
-                            target_entries.append({
-                                'phone': phone,
-                                'code': code,
-                                'raw': line
-                            })
+                # Match 7-digit phone/sticker ID and 4-digit code
+                digits = re.findall(r'\d+', line)
+                if len(digits) >= 2:
+                    phone = next((d for d in digits if len(d) == 7), None)
+                    code = next((d for d in digits if len(d) == 4), None)
+                    if phone and code:
+                        target_entries.append({
+                            'phone': phone,
+                            'code': code,
+                            'raw': line
+                        })
 
             if remove_duplicates and target_entries:
                 seen = set()
@@ -634,194 +625,169 @@ with tab_pdf:
                     st.toast(f"Cleaned {dupes_found} duplicate entries from sequence!", icon="🧹")
 
             if not target_entries or not label_file:
-                st.warning("Provide phone+code list and upload a PDF.")
+                st.warning("Please provide your target list and upload a PDF.")
             else:
-                with st.spinner("Scanning WB labels for phone+code pairs..."):
+                with st.spinner("Scanning labels with Multi-Angle OCR (reading vertical WB sticker numbers)..."):
                     try:
                         pdf_reader = pypdf.PdfReader(io.BytesIO(label_file.getvalue()))
                         pdf_writer = pypdf.PdfWriter()
 
                         images = convert_from_bytes(label_file.getvalue(), dpi=200)
-                        page_matches = []  # List of dicts with page info
+                        page_matches = []
 
                         for i, img in enumerate(images):
-                            page_num = i + 1
                             w, h = img.size
-
-                            # Strategy 1: Try barcode/QR decode first (fast)
-                            barcodes = decode(img)
                             all_text = ""
+
+                            # Strategy 1: Fast Barcode / QR Decode
+                            barcodes = decode(img)
                             for b in barcodes:
-                                all_text += b.data.decode("utf-8") + " "
+                                all_text += " " + b.data.decode("utf-8", errors="ignore")
 
-                            # Strategy 2: OCR on bottom-right crop (WB labels have phone+code there)
-                            # Crop the bottom-right region where WB phone+code appears
-                            crop = img.crop((w * 0.6, h * 0.65, w, h))
-                            ocr_text = pytesseract.image_to_string(crop)
-                            all_text += " " + ocr_text
+                            # Strategy 2: Standard Horizontal OCR (Full Page)
+                            all_text += " " + pytesseract.image_to_string(img)
 
-                            # Strategy 3: If still no match, OCR full page
-                            if not re.search(r'\d{7}', all_text):
-                                full_text = pytesseract.image_to_string(img)
-                                all_text += " " + full_text
+                            # Strategy 3: CRITICAL ENHANCEMENT - Multi-Angle Vertical OCR
+                            # WB sticker numbers are oriented vertically on the right side of the label
+                            right_crop = img.crop((int(w * 0.60), 0, w, h))
+                            
+                            # Rotate 90° and 270° to capture text reading top-to-bottom or bottom-to-top
+                            for angle in [90, 270]:
+                                rotated_crop = right_crop.rotate(angle, expand=True)
+                                # psm 6 assumes a single uniform block of text
+                                ocr_vertical = pytesseract.image_to_string(rotated_crop, config='--psm 6')
+                                all_text += " " + ocr_vertical
 
-                            # Extract phone+code pairs from all collected text
-                            phones_found = re.findall(r'\b\d{7}\b', all_text)
-                            codes_found = re.findall(r'\b\d{4}\b', all_text)
+                            # Extract all valid 7-digit IDs and 4-digit codes found on this page
+                            phones_found = list(set(re.findall(r'\b\d{7}\b', all_text)))
+                            codes_found = list(set(re.findall(r'\b\d{4}\b', all_text)))
 
-                            # Also try to find tracking ID
+                            # Extract general tracking IDs if present
                             tracking_ids = SCANNING_ID_REGEX.findall(all_text)
                             tracking_id = tracking_ids[0] if tracking_ids else "N/A"
-
-                            # Build candidate matches: pair each phone with each code
-                            candidates = []
-                            for phone in set(phones_found):
-                                for code in set(codes_found):
-                                    candidates.append({'phone': phone, 'code': code})
 
                             page_matches.append({
                                 'page_idx': i,
                                 'page_obj': pdf_reader.pages[i],
                                 'tracking_id': tracking_id,
-                                'candidates': candidates,
-                                'phones': list(set(phones_found)),
-                                'codes': list(set(codes_found)),
-                                'raw_text': all_text[:200]
+                                'phones': phones_found,
+                                'codes': codes_found
                             })
 
-                        # --- MATCHING PHASE ---
-                        # For each target entry, find the best matching page
-                        matched_pages = []  # Pages already assigned
+                        # --- MATCHING & REARRANGING PHASE ---
+                        matched_page_indices = []
                         results_dataset = []
                         new_page_counter = 1
 
-                        st.info(f"🔍 Found {len(page_matches)} pages in PDF. Matching against {len(target_entries)} target entries...")
+                        st.info(f"🔍 Scanned {len(page_matches)} PDF pages. Matching against your {len(target_entries)} sequence items...")
 
                         for target in target_entries:
                             target_phone = target['phone']
                             target_code = target['code']
                             matched_page = None
+                            match_type = ""
 
-                            # Find page with exact phone+code match
+                            # Priority 1: Exact Match (Both 7-digit ID and 4-digit code match)
                             for pm in page_matches:
-                                if pm['page_idx'] in matched_pages:
+                                if pm['page_idx'] in matched_page_indices:
                                     continue
-                                for cand in pm['candidates']:
-                                    if cand['phone'] == target_phone and cand['code'] == target_code:
-                                        matched_page = pm
-                                        break
-                                if matched_page:
+                                if target_phone in pm['phones'] and target_code in pm['codes']:
+                                    matched_page = pm
+                                    match_type = "Exact Pair (7+4)"
                                     break
 
-                            # Fallback: phone-only match if exact not found
+                            # Priority 2: Fallback Match (7-digit primary ID matches, code OCR failed/smudged)
                             if not matched_page:
                                 for pm in page_matches:
-                                    if pm['page_idx'] in matched_pages:
+                                    if pm['page_idx'] in matched_page_indices:
                                         continue
                                     if target_phone in pm['phones']:
                                         matched_page = pm
+                                        match_type = "Primary ID Only (7-digit)"
                                         break
 
                             if matched_page:
-                                matched_pages.append(matched_page['page_idx'])
+                                matched_page_indices.append(matched_page['page_idx'])
                                 pdf_writer.add_page(matched_page['page_obj'])
 
                                 results_dataset.append({
                                     "Status": "✅ MATCHED",
-                                    "Sequence #": new_page_counter,
-                                    "Phone": target_phone,
-                                    "Code": target_code,
+                                    "New Page #": new_page_counter,
+                                    "Target ID": f"{target_phone} {target_code}",
                                     "Original Page": matched_page['page_idx'] + 1,
-                                    "Output Page": new_page_counter,
-                                    "Tracking ID": matched_page['tracking_id'],
-                                    "Match Type": "Exact" if any(c['phone'] == target_phone and c['code'] == target_code for c in matched_page['candidates']) else "Phone-Only",
-                                    "Notes": "Found and sequenced"
+                                    "Match Quality": match_type,
+                                    "Detected IDs on Page": f"IDs: {','.join(matched_page['phones'])} | Codes: {','.join(matched_page['codes'])}"
                                 })
                                 new_page_counter += 1
                             else:
                                 results_dataset.append({
                                     "Status": "❌ MISSING",
-                                    "Sequence #": "—",
-                                    "Phone": target_phone,
-                                    "Code": target_code,
+                                    "New Page #": "—",
+                                    "Target ID": f"{target_phone} {target_code}",
                                     "Original Page": "N/A",
-                                    "Output Page": "N/A",
-                                    "Tracking ID": "—",
-                                    "Match Type": "—",
-                                    "Notes": "No matching page found in PDF"
+                                    "Match Quality": "No Match Found",
+                                    "Detected IDs on Page": "—"
                                 })
 
-                        # Add extra pages not in target list
+                        # --- append EXTRA PAGES NOT IN LIST ---
                         extra_count = 0
                         for pm in page_matches:
-                            if pm['page_idx'] not in matched_pages:
+                            if pm['page_idx'] not in matched_page_indices:
                                 pdf_writer.add_page(pm['page_obj'])
                                 extra_count += 1
                                 results_dataset.append({
-                                    "Status": "ℹ️ EXTRA",
-                                    "Sequence #": "—",
-                                    "Phone": ", ".join(pm['phones']) if pm['phones'] else "N/A",
-                                    "Code": ", ".join(pm['codes']) if pm['codes'] else "N/A",
+                                    "Status": "ℹ️ EXTRA (Unlisted)",
+                                    "New Page #": new_page_counter,
+                                    "Target ID": "Unlisted in Sequence",
                                     "Original Page": pm['page_idx'] + 1,
-                                    "Output Page": new_page_counter,
-                                    "Tracking ID": pm['tracking_id'],
-                                    "Match Type": "—",
-                                    "Notes": "Page in PDF but not in target list"
+                                    "Match Quality": "Appended to End",
+                                    "Detected IDs on Page": f"IDs: {','.join(pm['phones'])} | Codes: {','.join(pm['codes'])}"
                                 })
                                 new_page_counter += 1
 
-                        # --- RESULTS DISPLAY ---
+                        # --- RENDER TABLE & METRICS ---
                         if results_dataset:
                             st.divider()
-                            st.markdown("### 📊 Processing Results")
+                            st.markdown("### 📊 Sequence Alignment Results")
                             res_df = pd.DataFrame(results_dataset)
 
-                            # Color coding
-                            def color_status(val):
-                                if '✅' in str(val):
-                                    return 'background-color: #d4edda; color: #155724'
-                                elif '❌' in str(val):
-                                    return 'background-color: #f8d7da; color: #721c24'
-                                elif 'ℹ️' in str(val):
-                                    return 'background-color: #fff3cd; color: #856404'
+                            def style_rows(val):
+                                if '✅' in str(val): return 'background-color: rgba(40, 167, 69, 0.2); color: #28a745;'
+                                if '❌' in str(val): return 'background-color: rgba(220, 53, 69, 0.2); color: #dc3545;'
+                                if 'ℹ️' in str(val): return 'background-color: rgba(255, 193, 7, 0.2); color: #ffc107;'
                                 return ''
 
-                            styled_df = res_df.style.applymap(color_status, subset=['Status'])
-                            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                            st.dataframe(res_df.style.applymap(style_rows, subset=['Status']), use_container_width=True, hide_index=True)
 
                             matched_count = sum(1 for r in results_dataset if '✅' in r['Status'])
                             missing_count = sum(1 for r in results_dataset if '❌' in r['Status'])
-                            extra_count = sum(1 for r in results_dataset if 'ℹ️' in r['Status'])
 
-                            col_stats1, col_stats2, col_stats3 = st.columns(3)
-                            col_stats1.metric("✅ Matched", matched_count)
-                            col_stats2.metric("❌ Missing", missing_count)
-                            col_stats3.metric("ℹ️ Extra Pages", extra_count)
+                            c_stat1, c_stat2, c_stat3 = st.columns(3)
+                            c_stat1.metric("✅ Correctly Sequenced", matched_count)
+                            c_stat2.metric("❌ Missing from PDF", missing_count)
+                            c_stat3.metric("ℹ️ Extra Pages Appended", extra_count)
 
-                        # --- PDF GENERATION & DOWNLOAD ---
+                        # --- GENERATE DOWNLOAD ---
                         if matched_count > 0 or extra_count > 0:
                             out_io = io.BytesIO()
                             pdf_writer.write(out_io)
-                            log_action(user, "PDF_SEQUENCED_WB", f"Mode: WB Phone+Code, Matched: {matched_count}, Missing: {missing_count}, Extra: {extra_count}")
-                            st.success(f"✅ PDF Ready: {matched_count} matched, {missing_count} missing, {extra_count} extra pages!")
+                            log_action(user, "PDF_SEQUENCED_WB_ENHANCED", f"Matched: {matched_count}, Missing: {missing_count}, Extra: {extra_count}")
+                            st.success(f"✅ Sequenced PDF Ready! Reordered {matched_count} labels exactly to your list.")
 
-                            filename = f"wb_sorted_labels_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                            filename = f"WB_Sequenced_Labels_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
                             st.download_button(
-                                label="📥 Download Sequenced PDF", 
+                                label="📥 Download Reordered PDF", 
                                 data=out_io.getvalue(), 
                                 file_name=filename, 
                                 mime="application/pdf",
                                 use_container_width=True
                             )
                         else:
-                            st.error("❌ No matches found in document.")
+                            st.error("❌ Could not detect any matching label numbers in the uploaded document.")
 
                     except Exception as e:
-                        st.error(f"❌ Processing Error: {str(e)}")
-                        import traceback
-                        st.error(traceback.format_exc())
-
-        # --- ORIGINAL MODES (Smart Sort / Strict Rearrange) ---
+                        st.error(f"❌ Processing Error: {str(e)}") 
+                        # --- ORIGINAL MODES (Smart Sort / Strict Rearrange) ---
         else:
             target_ids_raw = [tid.strip() for tid in sort_list.split('\n') if tid.strip()]
             target_ids = []
