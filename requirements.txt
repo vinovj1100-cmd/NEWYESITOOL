@@ -9,3 +9,4 @@ numpy
 deep_translator
 fpdf2
 opencv-python-headless
+ozone-wms-guardian
